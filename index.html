@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PurgeOS V9 Native</title>
+    <title>PurgeOS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -11,65 +11,226 @@
             --text-main: #ffffff; --text-dim: #666670; --border: rgba(255, 255, 255, 0.08);
             --danger: #ff3b30; --success: #34c759;
         }
+
         body { 
             margin: 0; font-family: -apple-system, system-ui, sans-serif; 
             background-color: var(--bg); color: var(--text-main); overflow: hidden;
             overscroll-behavior-y: none; -webkit-font-smoothing: antialiased; 
-            -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; user-select: none;
         }
-        .hero { padding: 50px 20px 30px; display: flex; flex-direction: column; align-items: center; background: radial-gradient(circle at 50% 0%, rgba(0, 210, 255, 0.08) 0%, transparent 60%); }
+
+        #realGalleryInput { display: none; }
+
+        #toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: rgba(10, 10, 12, 0.95); backdrop-filter: blur(15px); border: 1px solid var(--border); color: white; padding: 14px 24px; border-radius: 30px; font-size: 13px; font-weight: 700; z-index: 10000; transition: top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 15px 35px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 10px; }
+        #toast.show { top: max(20px, env(safe-area-inset-top)); }
+
+        .hero { padding: max(40px, env(safe-area-inset-top)) 20px 30px; display: flex; flex-direction: column; align-items: center; background: radial-gradient(circle at 50% 0%, rgba(0, 210, 255, 0.08) 0%, transparent 60%); }
         .core-display { position: relative; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; }
         .progress-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--cerulean) 0%, var(--orange) 84%, transparent 84%); mask: radial-gradient(transparent 64%, black 65%); -webkit-mask: radial-gradient(transparent 64%, black 65%); transition: 1s; }
-        .core-pct { font-size: 48px; font-weight: 800; }
+        .core-content { text-align: center; z-index: 10; }
+        .core-pct { font-size: 48px; font-weight: 800; letter-spacing: -2px; line-height: 1; transition: 0.3s; }
+        .core-pct span { font-size: 18px; font-weight: 400; color: var(--text-dim); margin-left: 2px; }
+        
         .scroll-area { padding: 0 25px 120px; height: calc(100vh - 310px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .section-header { font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin: 25px 0 15px; display: flex; align-items: center; gap: 10px; }
         .section-header::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-        .card { background: var(--surface); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 20px; padding: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; cursor: pointer; }
-        .card-icon { width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: #000; border: 1px solid var(--border); }
-        .icon-p { color: var(--orange); }
-        #reviewScreen { position: fixed; inset: 0; background: #030305; z-index: 2000; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: 0.4s; }
+        
+        .card { background: var(--surface); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 20px; padding: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: 0.2s; }
+        .card:active { transform: scale(0.96); background: rgba(255,255,255,0.05); }
+        .card-icon { width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #000; border: 1px solid var(--border); }
+        .icon-p { color: var(--orange); box-shadow: 0 0 15px rgba(255, 85, 0, 0.2); }
+        .icon-s { color: var(--cerulean); box-shadow: 0 0 15px rgba(0, 210, 255, 0.2); }
+        .card-body { flex: 1; }
+        .card-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+        .card-meta { font-size: 11px; color: var(--text-dim); font-weight: 500; }
+
+        #reviewScreen { position: fixed; inset: 0; background: rgba(3, 3, 5, 0.98); backdrop-filter: blur(30px); z-index: 2000; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: 0.4s; }
         #reviewScreen.active { opacity: 1; visibility: visible; }
-        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 15px 20px 120px; overflow-y: auto; flex: 1; }
-        .gallery-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 1; background: #111; }
-        .gallery-item.selected { border: 2px solid var(--danger); transform: scale(0.94); }
+        .review-header { padding: max(20px, env(safe-area-inset-top)) 25px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .review-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); }
+
+        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 15px 20px 120px; overflow-y: auto; flex: 1; align-content: flex-start; }
+        .gallery-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 1; border: 2px solid transparent; background: #111; transition: 0.2s; }
+        .gallery-item.selected { border-color: var(--danger); transform: scale(0.94); }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
-        .bottom-action-bar { position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px 25px 40px; background: linear-gradient(0deg, #030305 50%, transparent); }
-        .btn-purge-mass { width: 100%; padding: 18px; border-radius: 16px; border: none; font-size: 14px; font-weight: 800; background: var(--danger); color: white; }
-        #previewModal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: 0.3s; }
+        .gallery-item.selected img { opacity: 0.5; filter: grayscale(50%); }
+        .check-badge { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; background: rgba(0,0,0,0.5); border: 1.5px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: transparent; transition: 0.2s; }
+        .gallery-item.selected .check-badge { background: var(--danger); color: white; border-color: var(--danger); }
+        .badge-size { position: absolute; bottom: 6px; left: 6px; background: rgba(0,0,0,0.8); padding: 3px 6px; border-radius: 6px; font-size: 10px; font-weight: 800; }
+
+        .bottom-action-bar { position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px 25px max(40px, env(safe-area-inset-bottom)); box-sizing: border-box; background: linear-gradient(0deg, rgba(5,5,7,1) 50%, transparent 100%); }
+        .btn-purge-mass { width: 100%; padding: 18px; border-radius: 16px; border: none; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; background: var(--danger); color: white; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; gap: 10px; box-shadow: 0 10px 25px rgba(255, 59, 48, 0.4); outline: none; }
+        .btn-purge-mass:active { transform: scale(0.96); }
+
+        #previewModal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: 0.3s; backdrop-filter: blur(15px); }
         #previewModal.show { opacity: 1; visibility: visible; }
+        #previewModal img { max-width: 95%; max-height: 80%; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); pointer-events: none; }
+        .close-preview { margin-top: 30px; padding: 12px 30px; background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 20px; font-weight: 700; font-size: 14px; outline: none; }
+
+        #scanner { position: fixed; inset: 0; background: var(--bg); z-index: 3000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        .pulse-ring { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--cerulean); display: flex; align-items: center; justify-content: center; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 210, 255, 0.4); } 70% { box-shadow: 0 0 0 30px rgba(0, 210, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 210, 255, 0); } }
     </style>
 </head>
 <body>
-    <div id="previewModal" onclick="this.classList.remove('show')"><img id="previewImage" src="" style="max-width:90%; border-radius:16px;"></div>
+    <div id="toast"><i class="fas fa-check-circle" id="toastIcon"></i> <span id="toastMsg"></span></div>
+    
+    <input type="file" id="realGalleryInput" accept="image/*" multiple>
+
+    <div id="previewModal" onclick="this.classList.remove('show')">
+        <img id="previewImage" src="" draggable="false">
+        <button class="close-preview">Cerrar Vista</button>
+    </div>
+
+    <div id="scanner">
+        <div class="pulse-ring"><i class="fas fa-search" style="font-size: 24px; color: var(--cerulean);"></i></div>
+        <h2 style="margin-top: 30px; font-size: 12px; letter-spacing: 3px; color: var(--text-dim);">AUDITORÍA EN CURSO</h2>
+    </div>
+
     <section class="hero">
         <div class="core-display">
             <div class="progress-ring" id="mainRing"></div>
-            <div class="core-pct">84<span>%</span></div>
+            <div class="core-content">
+                <div class="core-pct" id="pctText">84<span>%</span></div>
+                <div style="font-size: 10px; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px;">En Uso</div>
+            </div>
         </div>
     </section>
+
     <div class="scroll-area">
         <div class="section-header">Categoría Principal</div>
-        <div class="card" onclick="initGallery()"><div class="card-icon icon-p"><i class="fas fa-images"></i></div><div class="card-body"><div class="card-title">Galería Inteligente</div><div class="card-meta">Detección de basura por IA</div></div></div>
+        <div class="card" onclick="document.getElementById('realGalleryInput').click()">
+            <div class="card-icon icon-p"><i class="fas fa-images"></i></div>
+            <div class="card-body">
+                <div class="card-title">Seleccionar de mi Celular</div>
+                <div class="card-meta">Cargá tus fotos para probar la purga</div>
+            </div>
+        </div>
+
+        <div class="section-header">Categoría Secundario</div>
+        <div class="card" onclick="showToast('Optimizando sistema', 'fa-bolt', 'var(--cerulean)')">
+            <div class="card-icon icon-s"><i class="fas fa-broom"></i></div>
+            <div class="card-body">
+                <div class="card-title">Purgar Caché</div>
+                <div class="card-meta">Archivos temporales ocultos</div>
+            </div>
+        </div>
     </div>
+
     <div id="reviewScreen">
+        <div class="review-header">
+            <div class="review-title">Mantené pulsado para ver</div>
+            <button style="background: none; border: none; color: var(--text-main); font-size: 18px; outline: none;" onclick="closeReview()"><i class="fas fa-times"></i></button>
+        </div>
         <div class="gallery-grid" id="galleryGrid"></div>
-        <div class="bottom-action-bar"><button class="btn-purge-mass" onclick="alert('Simulación de purga')">PURGAR SELECCIÓN</button></div>
+        <div class="bottom-action-bar">
+            <button class="btn-purge-mass" id="btnExecutePurge" onclick="executePurge()">
+                <i class="fas fa-trash"></i> Purgar Selección
+            </button>
+        </div>
     </div>
+
     <script>
-        let mediaQueue = [
-            {id:1, size:4.2, img:"https://picsum.photos/400?random=1", selected:true},
-            {id:2, size:1.5, img:"https://picsum.photos/400?random=2", selected:true}
-        ];
-        function initGallery() { document.getElementById('reviewScreen').classList.add('active'); renderGrid(); }
+        function showToast(msg, icon = 'fa-check-circle', color = '#fff') {
+            document.getElementById('toastMsg').innerText = msg;
+            document.getElementById('toastIcon').className = `fas ${icon}`;
+            document.getElementById('toastIcon').style.color = color;
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        let mediaQueue = [];
+        let pressTimer;
+        let isLongPress = false;
+
+        document.getElementById('realGalleryInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            if (files.length === 0) return;
+
+            document.getElementById('scanner').style.display = 'flex';
+            mediaQueue = [];
+
+            Array.from(files).forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    mediaQueue.push({
+                        id: index,
+                        img: event.target.result,
+                        size: (file.size / (1024 * 1024)).toFixed(1),
+                        selected: true
+                    });
+
+                    if (mediaQueue.length === files.length) {
+                        setTimeout(() => {
+                            document.getElementById('scanner').style.display = 'none';
+                            document.getElementById('reviewScreen').classList.add('active');
+                            renderGrid();
+                        }, 1000);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
         function renderGrid() {
-            const grid = document.getElementById('galleryGrid'); grid.innerHTML = '';
+            const grid = document.getElementById('galleryGrid');
+            grid.innerHTML = '';
             mediaQueue.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = `gallery-item ${item.selected ? 'selected' : ''}`;
-                div.onclick = () => { item.selected = !item.selected; renderGrid(); };
-                div.innerHTML = `<img src="${item.img}"><div style="position:absolute; bottom:5px; left:5px; font-size:10px; background:rgba(0,0,0,0.5); padding:2px 5px; border-radius:4px;">${item.size} MB</div>`;
+                
+                div.ontouchstart = (e) => {
+                    isLongPress = false;
+                    pressTimer = setTimeout(() => {
+                        isLongPress = true;
+                        if (navigator.vibrate) navigator.vibrate(40);
+                        document.getElementById('previewImage').src = item.img;
+                        document.getElementById('previewModal').classList.add('show');
+                    }, 400);
+                };
+                div.ontouchend = (e) => {
+                    clearTimeout(pressTimer);
+                    if (!isLongPress) {
+                        mediaQueue[index].selected = !mediaQueue[index].selected;
+                        renderGrid();
+                    }
+                };
+                div.ontouchmove = () => clearTimeout(pressTimer);
+
+                div.innerHTML = `
+                    <img src="${item.img}" draggable="false">
+                    <div class="check-badge"><i class="fas fa-check"></i></div>
+                    <div class="badge-size">${item.size} MB</div>
+                `;
                 grid.appendChild(div);
             });
+            updateBtn();
+        }
+
+        function updateBtn() {
+            const selected = mediaQueue.filter(i => i.selected);
+            const total = selected.reduce((sum, i) => sum + parseFloat(i.size), 0).toFixed(1);
+            const btn = document.getElementById('btnExecutePurge');
+            if (selected.length > 0) {
+                btn.innerHTML = `<i class="fas fa-trash"></i> Purgar ${selected.length} fotos (${total} MB)`;
+                btn.style.background = 'var(--danger)';
+                btn.disabled = false;
+            } else {
+                btn.innerHTML = `Nada seleccionado`;
+                btn.style.background = 'var(--surface)';
+                btn.disabled = true;
+            }
+        }
+
+        function executePurge() {
+            alert("¡Funciona! En la versión final, estas fotos se borrarán físicamente de tu celular.");
+            closeReview();
+        }
+
+        function closeReview() {
+            document.getElementById('reviewScreen').classList.remove('active');
+            document.getElementById('realGalleryInput').value = '';
         }
     </script>
 </body>
