@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PurgeOS V9 Native</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #030305; --surface: rgba(18, 18, 22, 0.85); --cerulean: #00d2ff; --orange: #ff5500;
+            --text-main: #ffffff; --text-dim: #666670; --border: rgba(255, 255, 255, 0.08);
+            --danger: #ff3b30; --success: #34c759;
+        }
+        body { 
+            margin: 0; font-family: -apple-system, system-ui, sans-serif; 
+            background-color: var(--bg); color: var(--text-main); overflow: hidden;
+            overscroll-behavior-y: none; -webkit-font-smoothing: antialiased; 
+            -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+        }
+        .hero { padding: 50px 20px 30px; display: flex; flex-direction: column; align-items: center; background: radial-gradient(circle at 50% 0%, rgba(0, 210, 255, 0.08) 0%, transparent 60%); }
+        .core-display { position: relative; width: 180px; height: 180px; display: flex; align-items: center; justify-content: center; }
+        .progress-ring { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--cerulean) 0%, var(--orange) 84%, transparent 84%); mask: radial-gradient(transparent 64%, black 65%); -webkit-mask: radial-gradient(transparent 64%, black 65%); transition: 1s; }
+        .core-pct { font-size: 48px; font-weight: 800; }
+        .scroll-area { padding: 0 25px 120px; height: calc(100vh - 310px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .section-header { font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: 2px; margin: 25px 0 15px; display: flex; align-items: center; gap: 10px; }
+        .section-header::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+        .card { background: var(--surface); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 20px; padding: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; cursor: pointer; }
+        .card-icon { width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: #000; border: 1px solid var(--border); }
+        .icon-p { color: var(--orange); }
+        #reviewScreen { position: fixed; inset: 0; background: #030305; z-index: 2000; display: flex; flex-direction: column; opacity: 0; visibility: hidden; transition: 0.4s; }
+        #reviewScreen.active { opacity: 1; visibility: visible; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 15px 20px 120px; overflow-y: auto; flex: 1; }
+        .gallery-item { position: relative; border-radius: 12px; overflow: hidden; aspect-ratio: 1; background: #111; }
+        .gallery-item.selected { border: 2px solid var(--danger); transform: scale(0.94); }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+        .bottom-action-bar { position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px 25px 40px; background: linear-gradient(0deg, #030305 50%, transparent); }
+        .btn-purge-mass { width: 100%; padding: 18px; border-radius: 16px; border: none; font-size: 14px; font-weight: 800; background: var(--danger); color: white; }
+        #previewModal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: 0.3s; }
+        #previewModal.show { opacity: 1; visibility: visible; }
+    </style>
+</head>
+<body>
+    <div id="previewModal" onclick="this.classList.remove('show')"><img id="previewImage" src="" style="max-width:90%; border-radius:16px;"></div>
+    <section class="hero">
+        <div class="core-display">
+            <div class="progress-ring" id="mainRing"></div>
+            <div class="core-pct">84<span>%</span></div>
+        </div>
+    </section>
+    <div class="scroll-area">
+        <div class="section-header">Categoría Principal</div>
+        <div class="card" onclick="initGallery()"><div class="card-icon icon-p"><i class="fas fa-images"></i></div><div class="card-body"><div class="card-title">Galería Inteligente</div><div class="card-meta">Detección de basura por IA</div></div></div>
+    </div>
+    <div id="reviewScreen">
+        <div class="gallery-grid" id="galleryGrid"></div>
+        <div class="bottom-action-bar"><button class="btn-purge-mass" onclick="alert('Simulación de purga')">PURGAR SELECCIÓN</button></div>
+    </div>
+    <script>
+        let mediaQueue = [
+            {id:1, size:4.2, img:"https://picsum.photos/400?random=1", selected:true},
+            {id:2, size:1.5, img:"https://picsum.photos/400?random=2", selected:true}
+        ];
+        function initGallery() { document.getElementById('reviewScreen').classList.add('active'); renderGrid(); }
+        function renderGrid() {
+            const grid = document.getElementById('galleryGrid'); grid.innerHTML = '';
+            mediaQueue.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = `gallery-item ${item.selected ? 'selected' : ''}`;
+                div.onclick = () => { item.selected = !item.selected; renderGrid(); };
+                div.innerHTML = `<img src="${item.img}"><div style="position:absolute; bottom:5px; left:5px; font-size:10px; background:rgba(0,0,0,0.5); padding:2px 5px; border-radius:4px;">${item.size} MB</div>`;
+                grid.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
