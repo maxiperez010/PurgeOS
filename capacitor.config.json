@@ -1,0 +1,6 @@
+{
+  "appId": "com.purgeos.app",
+  "appName": "PurgeOS",
+  "webDir": ".",
+  "bundledWebRuntime": false
+}
